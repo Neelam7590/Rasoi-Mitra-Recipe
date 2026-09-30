@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "RasoiMitra"
+description = "A Hindi and English voice-and-text cooking and nutrition assistant with chat history, favorites, and recipe filters."
+version = "1.0.0"
+id = "artifacts/rasoi-mitra"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18202
+
+[services.development]
+run = "pnpm --filter @workspace/rasoi-mitra run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rasoi-mitra", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/rasoi-mitra/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18202"
+BASE_PATH = "/"
