@@ -50,20 +50,3 @@ export const CreateRasoiMitraReplyResponse = zod.object({
 })
 
 
-/**
- * @summary Convert an assistant reply to speech
- */
-export const createRasoiMitraSpeechBodyTextMax = 6000;
-
-
-
-export const CreateRasoiMitraSpeechBody = zod.object({
-  "text": zod.string().min(1).max(createRasoiMitraSpeechBodyTextMax),
-  "language": zod.enum(['hi-IN', 'en-IN'])
-})
-
-export const CreateRasoiMitraSpeechResponse = zod.object({
-  "audioBase64": zod.string(),
-  "contentType": zod.string()
-})
-

@@ -79,24 +79,3 @@ export interface RasoiMitraChatReply {
   reply: string;
 }
 
-export type RasoiMitraSpeechInputLanguage = typeof RasoiMitraSpeechInputLanguage[keyof typeof RasoiMitraSpeechInputLanguage];
-
-
-export const RasoiMitraSpeechInputLanguage = {
-  'hi-IN': 'hi-IN',
-  'en-IN': 'en-IN',
-} as const;
-
-export interface RasoiMitraSpeechInput {
-  /**
-     * @minLength 1
-     * @maxLength 6000
-     */
-  text: string;
-  language: RasoiMitraSpeechInputLanguage;
-}
-
-export interface RasoiMitraSpeechReply {
-  audioBase64: string;
-  contentType: string;
-}

@@ -5,7 +5,7 @@ const router: IRouter = Router();
 
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({
-    status: process.env.OPENAI_API_KEY ? "ok" : "needs_openai_key",
+    status: process.env.GROQ_API_KEY ? "ok" : "needs_api_key",
   });
   res.json(data);
 });

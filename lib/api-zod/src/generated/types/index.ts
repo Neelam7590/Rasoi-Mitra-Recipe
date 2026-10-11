@@ -13,8 +13,5 @@ export * from './rasoiMitraChatReply';
 export * from './rasoiMitraPreferences';
 export * from './rasoiMitraPreferencesDietaryFiltersItem';
 export * from './rasoiMitraPreferencesMealType';
-export * from './rasoiMitraSpeechInput';
-export * from './rasoiMitraSpeechInputLanguage';
-export * from './rasoiMitraSpeechReply';
 export * from './rasoiMitraTurn';
 export * from './rasoiMitraTurnRole';

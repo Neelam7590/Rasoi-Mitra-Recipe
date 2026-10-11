@@ -48,28 +48,6 @@ paths:
           description: Invalid request
         "503":
           description: Assistant service is not configured
-  /rasoi-mitra/speech:
-    post:
-      operationId: createRasoiMitraSpeech
-      tags: [rasoi-mitra]
-      summary: Convert an assistant reply to speech
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RasoiMitraSpeechInput"
-      responses:
-        "200":
-          description: Generated speech audio
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RasoiMitraSpeechReply"
-        "400":
-          description: Invalid request
-        "503":
-          description: Speech service is not configured
 components:
   schemas:
     HealthStatus:
@@ -131,23 +109,4 @@ components:
         reply:
           type: string
       required: [reply]
-    RasoiMitraSpeechInput:
-      type: object
-      properties:
-        text:
-          type: string
-          minLength: 1
-          maxLength: 6000
-        language:
-          type: string
-          enum: [hi-IN, en-IN]
-      required: [text, language]
-    RasoiMitraSpeechReply:
-      type: object
-      properties:
-        audioBase64:
-          type: string
-        contentType:
-          type: string
-      required: [audioBase64, contentType]
 

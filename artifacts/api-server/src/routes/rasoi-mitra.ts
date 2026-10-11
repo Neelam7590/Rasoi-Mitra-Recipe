@@ -3,8 +3,6 @@ import { Router, type IRouter } from "express";
 import {
   CreateRasoiMitraReplyBody,
   CreateRasoiMitraReplyResponse,
-  CreateRasoiMitraSpeechBody,
-  CreateRasoiMitraSpeechResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -24,9 +22,11 @@ Scope and safety:
 - Do not invent ingredients the user did not list when the request is specifically to use only available ingredients; mention a basic pantry item only if clearly marked optional.
 - Keep answers readable and focused.`;
 
-function getOpenAIClient(): OpenAI | null {
-  const apiKey = process.env.OPENAI_API_KEY;
-  return apiKey ? new OpenAI({ apiKey }) : null;
+function getGroqClient(): OpenAI | null {
+  const apiKey = process.env.GROQ_API_KEY;
+  return apiKey
+    ? new OpenAI({ apiKey, baseURL: "https://api.groq.com/openai/v1" })
+    : null;
 }
 
 router.post("/rasoi-mitra/chat", async (req, res): Promise<void> => {
@@ -36,11 +36,11 @@ router.post("/rasoi-mitra/chat", async (req, res): Promise<void> => {
     return;
   }
 
-  const client = getOpenAIClient();
+  const client = getGroqClient();
   if (!client) {
     res.status(503).json({
       error:
-        "AI answers are not configured yet. Add OPENAI_API_KEY in Replit Secrets and restart the API server.",
+        "AI answers are not configured yet. Add GROQ_API_KEY in Replit Secrets and restart the API server.",
     });
     return;
   }
@@ -69,8 +69,8 @@ router.post("/rasoi-mitra/chat", async (req, res): Promise<void> => {
 
   try {
     const response = await client.chat.completions.create({
-      model: "gpt-5.4-mini",
-      max_completion_tokens: 8192,
+      model: "openai/gpt-oss-20b",
+      max_completion_tokens: 4096,
       messages: [
         { role: "system", content: systemPrompt },
         ...history.map((turn) => ({
@@ -105,63 +105,8 @@ router.post("/rasoi-mitra/chat", async (req, res): Promise<void> => {
     res.status(503).json({
       error:
         status === 401
-          ? "OpenAI could not authorize the request. Check the OPENAI_API_KEY Secret."
+          ? "Groq could not authorize the request. Check the GROQ_API_KEY Secret."
           : "The assistant is temporarily unavailable. Please try again shortly.",
-    });
-  }
-});
-
-router.post("/rasoi-mitra/speech", async (req, res): Promise<void> => {
-  const parsed = CreateRasoiMitraSpeechBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const client = getOpenAIClient();
-  if (!client) {
-    res.status(503).json({
-      error:
-        "Voice playback is not configured yet. Add OPENAI_API_KEY in Replit Secrets and restart the API server.",
-    });
-    return;
-  }
-
-  const { text, language } = parsed.data;
-  try {
-    const audio = await client.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice: "alloy",
-      input: text,
-      response_format: "mp3",
-      instructions:
-        language === "hi-IN"
-          ? "Speak clearly in Hindi with a natural Indian Hindi accent."
-          : "Speak clearly in English with a natural Indian English accent.",
-    });
-    const audioBase64 = Buffer.from(await audio.arrayBuffer()).toString(
-      "base64",
-    );
-    res.json(
-      CreateRasoiMitraSpeechResponse.parse({
-        audioBase64,
-        contentType: "audio/mpeg",
-      }),
-    );
-  } catch (error) {
-    const status =
-      typeof error === "object" && error !== null && "status" in error
-        ? Number(error.status)
-        : undefined;
-    req.log.error(
-      { upstreamStatus: status },
-      "RasoiMitra speech request failed",
-    );
-    res.status(503).json({
-      error:
-        status === 401
-          ? "OpenAI could not authorize the request. Check the OPENAI_API_KEY Secret."
-          : "Voice playback is temporarily unavailable. Please try again.",
     });
   }
 });

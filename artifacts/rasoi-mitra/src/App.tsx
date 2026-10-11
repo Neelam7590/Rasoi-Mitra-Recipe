@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   getHealthCheckQueryKey,
   useCreateRasoiMitraReply,
-  useCreateRasoiMitraSpeech,
   useHealthCheck,
 } from "@workspace/api-client-react";
 import type {
@@ -97,7 +96,7 @@ const copy = {
     connection: "Kitchen connection",
     connected: "Ready to help",
     connecting: "Checking…",
-    needsKey: "Add OPENAI_API_KEY in Replit Secrets to enable AI replies",
+    needsKey: "Add GROQ_API_KEY in Replit Secrets to enable AI replies",
     unavailable: "Service unavailable",
     start: "Start a conversation",
     savedTitle: "Recipes worth keeping",
@@ -114,8 +113,8 @@ const copy = {
     micUnsupported: "Voice input isn’t supported in this browser. Try a recent version of Chrome or Edge.",
     microphoneError: "Microphone access wasn’t available. You can still type your question.",
     replyError: "I couldn’t reach the kitchen just now. Please try again in a moment.",
-    keyError: "AI replies are not configured yet. Add OPENAI_API_KEY in Replit Secrets, then try again.",
-    speechError: "I couldn’t prepare audio for this reply. Please try again.",
+    keyError: "AI replies are not configured yet. Add GROQ_API_KEY in Replit Secrets, then try again.",
+    speechError: "Voice playback isn’t available in this browser.",
     menu: "Open menu",
     servingLabel: "portions",
     message: "Message",
@@ -158,7 +157,7 @@ const copy = {
     connection: "रसोई से कनेक्शन",
     connected: "मदद के लिए तैयार",
     connecting: "जाँच रहे हैं…",
-    needsKey: "AI जवाब चालू करने के लिए Replit Secrets में OPENAI_API_KEY जोड़ें",
+    needsKey: "AI जवाब चालू करने के लिए Replit Secrets में GROQ_API_KEY जोड़ें",
     unavailable: "सेवा उपलब्ध नहीं",
     start: "बातचीत शुरू करें",
     savedTitle: "पसंदीदा रेसिपी",
@@ -175,8 +174,8 @@ const copy = {
     micUnsupported: "इस ब्राउज़र में आवाज़ से लिखना संभव नहीं है। Chrome या Edge का नया संस्करण आज़माएँ।",
     microphoneError: "माइक्रोफ़ोन उपलब्ध नहीं है। आप अपना सवाल लिख सकते हैं।",
     replyError: "अभी रसोई से संपर्क नहीं हो पाया। कृपया थोड़ी देर में फिर कोशिश करें।",
-    keyError: "AI जवाब अभी चालू नहीं हैं। Replit Secrets में OPENAI_API_KEY जोड़ें, फिर दोबारा कोशिश करें।",
-    speechError: "इस जवाब का ऑडियो तैयार नहीं हो पाया। फिर कोशिश करें।",
+    keyError: "AI जवाब अभी चालू नहीं हैं। Replit Secrets में GROQ_API_KEY जोड़ें, फिर दोबारा कोशिश करें।",
+    speechError: "इस ब्राउज़र में जवाब को आवाज़ में सुनाना उपलब्ध नहीं है।",
     menu: "मेन्यू खोलें",
     servingLabel: "लोग",
     message: "संदेश",
@@ -240,11 +239,9 @@ function App() {
   const [scrolledAway, setScrolledAway] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const speechSequenceRef = useRef(0);
   const replyMutation = useCreateRasoiMitraReply();
-  const speechMutation = useCreateRasoiMitraSpeech();
   const health = useHealthCheck({ query: { queryKey: getHealthCheckQueryKey(), refetchInterval: 45000 } });
   const t = copy[language];
   const activeConversation = conversations.find((conversation) => conversation.id === activeId) ?? null;
@@ -276,7 +273,7 @@ function App() {
     }
   }, [activeConversation?.messages.length, isFavoritesPage, replyMutation.isPending]);
   useEffect(() => () => {
-    audioRef.current?.pause();
+    window.speechSynthesis?.cancel();
     if (recognitionRef.current) recognitionRef.current.abort();
   }, []);
 
@@ -405,46 +402,53 @@ function App() {
     setIsListening(false);
   }
 
-  async function readAloud(message: Message) {
+  function readAloud(message: Message) {
     setSpeechErrorId(null);
+    const synth = window.speechSynthesis;
+    if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
+      setSpeechErrorId(message.id);
+      return;
+    }
     if (playingMessageId === message.id || speakingMessageId === message.id) {
       speechSequenceRef.current += 1;
-      audioRef.current?.pause();
-      audioRef.current = null;
+      synth.cancel();
       setPlayingMessageId(null);
       setSpeakingMessageId(null);
       return;
     }
-    audioRef.current?.pause();
-    audioRef.current = null;
-    setPlayingMessageId(null);
+
     const sequence = ++speechSequenceRef.current;
+    synth.cancel();
+    setPlayingMessageId(null);
     setSpeakingMessageId(message.id);
+
     try {
-      const speech = await speechMutation.mutateAsync({
-        data: { text: message.content, language: language === "hi" ? "hi-IN" : "en-IN" },
-      });
-      if (sequence !== speechSequenceRef.current) return;
-      const audio = new Audio(`data:${speech.contentType};base64,${speech.audioBase64}`);
-      audioRef.current = audio;
-      audio.onended = () => {
+      const locale = language === "hi" ? "hi-IN" : "en-IN";
+      const utterance = new SpeechSynthesisUtterance(message.content);
+      utterance.lang = locale;
+      utterance.rate = 0.98;
+      const languageCode = language === "hi" ? "hi" : "en";
+      const voices = synth.getVoices();
+      const voice = voices.find((item) => item.lang.toLowerCase() === locale.toLowerCase())
+        ?? voices.find((item) => item.lang.toLowerCase().startsWith(languageCode));
+      if (voice) utterance.voice = voice;
+      utterance.onstart = () => {
+        if (sequence !== speechSequenceRef.current) return;
+        setSpeakingMessageId(null);
+        setPlayingMessageId(message.id);
+      };
+      utterance.onend = () => {
+        if (sequence !== speechSequenceRef.current) return;
         setPlayingMessageId(null);
         setSpeakingMessageId(null);
-        audioRef.current = null;
       };
-      audio.onerror = () => {
+      utterance.onerror = () => {
+        if (sequence !== speechSequenceRef.current) return;
         setPlayingMessageId(null);
         setSpeakingMessageId(null);
         setSpeechErrorId(message.id);
-        audioRef.current = null;
       };
-      await audio.play();
-      if (sequence !== speechSequenceRef.current) {
-        audio.pause();
-        return;
-      }
-      setPlayingMessageId(message.id);
-      setSpeakingMessageId(null);
+      synth.speak(utterance);
     } catch {
       setSpeakingMessageId(null);
       setSpeechErrorId(message.id);
@@ -469,7 +473,7 @@ function App() {
     ? "loading"
     : health.isError
       ? "offline"
-      : health.data?.status === "needs_openai_key"
+      : health.data?.status === "needs_api_key"
         ? "needs-key"
         : "online";
 
