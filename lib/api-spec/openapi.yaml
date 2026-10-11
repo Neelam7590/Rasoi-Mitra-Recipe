@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: rasoi-mitra
+    description: Recipe, cooking, and general nutrition assistant
 paths:
   /healthz:
     get:
@@ -24,6 +26,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /rasoi-mitra/chat:
+    post:
+      operationId: createRasoiMitraReply
+      tags: [rasoi-mitra]
+      summary: Answer a recipe or nutrition question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RasoiMitraChatInput"
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RasoiMitraChatReply"
+        "400":
+          description: Invalid request
+        "503":
+          description: Assistant service is not configured
+  /rasoi-mitra/speech:
+    post:
+      operationId: createRasoiMitraSpeech
+      tags: [rasoi-mitra]
+      summary: Convert an assistant reply to speech
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RasoiMitraSpeechInput"
+      responses:
+        "200":
+          description: Generated speech audio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RasoiMitraSpeechReply"
+        "400":
+          description: Invalid request
+        "503":
+          description: Speech service is not configured
 components:
   schemas:
     HealthStatus:
@@ -33,4 +79,75 @@ components:
           type: string
       required:
         - status
+    RasoiMitraTurn:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          maxLength: 6000
+      required: [role, content]
+    RasoiMitraChatInput:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 6000
+        history:
+          type: array
+          maxItems: 16
+          items:
+            $ref: "#/components/schemas/RasoiMitraTurn"
+        languageHint:
+          type: string
+          enum: [hi-IN, en-IN]
+        preferences:
+          $ref: "#/components/schemas/RasoiMitraPreferences"
+      required: [message, history, languageHint, preferences]
+    RasoiMitraPreferences:
+      type: object
+      properties:
+        dietaryFilters:
+          type: array
+          items:
+            type: string
+            enum: [vegetarian, low_oil, high_protein, weight_loss]
+        mealType:
+          type: string
+          enum: [unspecified, breakfast, lunch, dinner, snack]
+        servings:
+          type: integer
+          minimum: 1
+          maximum: 20
+        useLeftovers:
+          type: boolean
+      required: [dietaryFilters, mealType, servings, useLeftovers]
+    RasoiMitraChatReply:
+      type: object
+      properties:
+        reply:
+          type: string
+      required: [reply]
+    RasoiMitraSpeechInput:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 6000
+        language:
+          type: string
+          enum: [hi-IN, en-IN]
+      required: [text, language]
+    RasoiMitraSpeechReply:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+        contentType:
+          type: string
+      required: [audioBase64, contentType]
 
