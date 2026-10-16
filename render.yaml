@@ -1,0 +1,23 @@
+# Render Blueprint for RasoiMitra
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: rasoi-mitra
+    runtime: node
+    plan: free
+    region: singapore
+    healthCheckPath: /api/healthz
+    buildCommand: >-
+      pnpm install --frozen-lockfile
+      && pnpm --filter @workspace/rasoi-mitra run build
+      && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Required by artifacts/rasoi-mitra/vite.config.ts at build time.
+      - key: BASE_PATH
+        value: "/"
+      # Set this in the Render dashboard, never commit it.
+      - key: GROQ_API_KEY
+        sync: false
