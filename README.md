@@ -1,6 +1,6 @@
 # RasoiMitra
 
-**Aapka roz ka rasoi companion.** Hindi/English me recipe, cooking aur general nutrition advice — type karo ya bol kar poochho, aur jawab bhi suna suna kar suno.
+**Aapka roz ka rasoi companion.** Hindi/English me use kro, cooking aur general nutrition advice — type karo ya bol kar poochho, aur jawab bhi suna suna kar suno.
 
 Live hai: **https://rasoi-mitra-recipe.onrender.com**
 
